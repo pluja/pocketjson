@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 	_ "github.com/mattn/go-sqlite3"
 
 	"pocketjson/ent"
@@ -293,6 +294,31 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	// Apply rate limiting only to non-authenticated requests
+	r.Use(func(next http.Handler) http.Handler {
+		limiter := httprate.Limit(
+			15,                                      // requests
+			1*time.Minute,                           // per minute
+			httprate.WithKeyFuncs(httprate.KeyByIP), // rate limit by IP
+		)
+
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			apiKey := r.Header.Get("X-API-Key")
+			isAuth, _, err := js.validateApiKey(r.Context(), apiKey)
+			if err != nil {
+				http.Error(w, "Server error", http.StatusInternalServerError)
+				return
+			}
+
+			if !isAuth {
+				limiter(next).ServeHTTP(w, r)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	r.Get("/health", healthCheck)
 
