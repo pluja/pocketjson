@@ -1,6 +1,6 @@
 services:
   pocketjson:
-    build: .
+    image: ghcr.io/pluja/pocketjson:main
     container_name: jsonstore
     ports:
       - "9819:9819"

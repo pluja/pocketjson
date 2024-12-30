@@ -17,23 +17,19 @@ A lightweight, single-binary JSON storage service with built-in expiry and multi
 
 ### Using Docker
 
-```bash
-# Clone the repository
-git clone https://github.com/pluja/pocketjson
-cd pocketjson
-
-# Set your master API key
-echo "MASTER_API_KEY=your-secure-master-key" > .env
-
-# Run the service
-docker-compose up -d
-```
+1. Copy the `docker-compose.yml` file
+2. Run `docker-compose up -d`
+3. (optional) Set the `MASTER_API_KEY` env variable to a `.env` file
 
 ### Direct Usage
 
+- Download the latest release from the releases page.
+- Build it yourself:
+  
 ```bash
-# Build and run
+# Build
 go build
+# Run
 ./pocketjson
 ```
 
