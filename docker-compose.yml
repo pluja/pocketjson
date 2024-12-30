@@ -1,0 +1,21 @@
+services:
+  pocketjson:
+    build: .
+    container_name: jsonstore
+    ports:
+      - "9819:9819"
+    environment:
+      - MASTER_API_KEY=${MASTER_API_KEY:-master-key-replace-in-production}
+    volumes:
+      - json_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9819/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  json_data:
+    name: jsonstore_data
