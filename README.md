@@ -81,7 +81,8 @@ curl -X POST http://localhost:9819/admin/keys \
 Store JSON with custom expiry:
 
 ```bash
-curl -X POST "http://localhost:9819/my-data?expiry=48" \
+# Expire after 3 days
+curl -X POST "http://localhost:9819/my-data?expiry=72" \
   -H "X-API-Key: 924a98c84222ca4b2984e417c767c519" \
   -H "Content-Type: application/json" \
   -d '{"hello":"world"}'
@@ -89,7 +90,7 @@ curl -X POST "http://localhost:9819/my-data?expiry=48" \
 # Response:
 {
   "id": "7f3d8_my-data",
-  "expires_at": "2024-01-22T15:30:45Z"
+  "expires_at": "2024-01-23T15:30:45Z"
 }
 ```
 
@@ -101,7 +102,8 @@ Note: Authenticated users' IDs are prefixed with their client_id (first 5 chars 
 
 | Method | Path | Description | Auth Required |
 |--------|------|-------------|---------------|
-| POST | /{id} | Store JSON | Optional |
+| POST | / | Store JSON with random ID | No |
+| POST | /{id} | Store JSON with specific ID | Yes |
 | GET | /{id} | Retrieve JSON | No |
 | POST | /admin/keys | Create API key | Yes (Admin) |
 | DELETE | /admin/keys/{key} | Delete API key | Yes (Admin) |
@@ -114,9 +116,9 @@ Note: Authenticated users' IDs are prefixed with their client_id (first 5 chars 
 
 ### Expiry Options
 
-- Default: 24 hours
+- Guest users: 48 hours
 - Authenticated users can specify:
-  - Custom hours: `?expiry=48` (48 hours)
+  - Custom hours: `?expiry=72` (72 hours)
   - Never expire: `?expiry=never`
 
 ## Development 🛠

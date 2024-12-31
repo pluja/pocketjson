@@ -29,9 +29,9 @@ import (
 )
 
 const (
-	defaultMaxSize    = 100 * 1024  // 100KB
-	authenticatedSize = 1024 * 1024 // 1MB
-	defaultExpiry     = 24 * time.Hour
+	defaultMaxSize    = 100 * 1024     // 100KB
+	authenticatedSize = 1024 * 1024    // 1MB
+	defaultExpiry     = 48 * time.Hour // 48 hours
 )
 
 var (
@@ -294,7 +294,7 @@ func serveHomePage(w http.ResponseWriter, r *http.Request) {
 		<li>Read the <a href="https://github.com/pluja/pocketjson?tab=readme-ov-file#api-reference-">API Docs</a></li>
 		<li>No backups. If your data is lost due to some technical issues, its lost forever.</li>
 		<li>Maximum allowed payload size cannot be more than 100 Kb per request for guest users.</li>
-		<li>Guest users expiration time is 24h</li>
+		<li>Guest users expiration time is 48h</li>
 		<li>Guest rate limit of 15req/min</li>
 		<li>This is meant for small projects and that's why it is offered FREE of cost.</li>
 	</ul>
