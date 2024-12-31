@@ -25,13 +25,26 @@ A lightweight, single-binary JSON storage service with built-in expiry and multi
 
 - Download the latest release from the releases page.
 - Build it yourself:
-  
+
 ```bash
 # Build
 go build
 # Run
 ./pocketjson
 ```
+
+### Configuration via Environment Variables 🔧
+
+| Variable               | Description                               | Default                          | Required |
+| ---------------------- | ----------------------------------------- | -------------------------------- | -------- |
+| MASTER_API_KEY         | Master key for administrative operations  | *random value, see std output*   | No       |
+| REQUEST_LIMIT          | Rate limit requests per minute for guests | 15                               | No       |
+| DEFAULT_EXPIRY_HOURS   | Default expiry time for stores            | `48`                             | No       |
+| DEFAULT_MAX_SIZE       | Maximum JSON size for guests in bytes     | `102400` (100kb)                 | No       |
+| AUTHENTICATED_MAX_SIZE | Maximum JSON size for auth users in bytes | `1048576` (1M)                   | No       |
+| CORS_ALLOWED_ORIGINS   | Allowed origins for CORS                  | `*`                              | No       |
+
+> If you are using `docker` create a `.env` file next to the `docker-compose.yml` and add the variables you need. If you are running it without docker, please declare the variables you need.
 
 ## API Usage 📡
 

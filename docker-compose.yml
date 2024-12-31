@@ -4,8 +4,6 @@ services:
     container_name: jsonstore
     ports:
       - "9819:9819"
-    environment:
-      - MASTER_API_KEY=${MASTER_API_KEY:-master-key-replace-in-production}
     volumes:
       - json_data:/app/data
     restart: unless-stopped

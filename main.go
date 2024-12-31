@@ -28,19 +28,33 @@ import (
 	"pocketjson/ent/jsonstorage"
 )
 
-const (
-	defaultMaxSize    = 100 * 1024     // 100KB
-	authenticatedSize = 1024 * 1024    // 1MB
-	defaultExpiry     = 48 * time.Hour // 48 hours
-)
-
 var (
-	masterApiKey = "master-key-replace-in-production" // In production, use environment variables
+	masterApiKey      = ""
+	defaultMaxSize    = getEnvInt("DEFAULT_MAX_SIZE", 100*1024)        // 100KB default
+	authenticatedSize = getEnvInt("AUTHENTICATED_MAX_SIZE", 1024*1024) // 1MB default
+	defaultExpiry     = time.Duration(getEnvInt("DEFAULT_EXPIRY_HOURS", 48)) * time.Hour
+	requestLimit      = getEnvInt("REQUEST_LIMIT", 15)
 )
 
 type JsonStore struct {
 	client  *ent.Client
 	cleanup sync.WaitGroup
+}
+
+func getEnvStr(key, def string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return def
+}
+
+func getEnvInt(key string, fallback int) int {
+	if value, exists := os.LookupEnv(key); exists {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return fallback
 }
 
 func generateRandomKey() string {
@@ -51,7 +65,6 @@ func generateRandomKey() string {
 
 func NewJsonStore(client *ent.Client) *JsonStore {
 	js := &JsonStore{client: client}
-	// Start the cleanup routine
 	js.startCleanupRoutine()
 	return js
 }
@@ -65,7 +78,6 @@ func (js *JsonStore) startCleanupRoutine() {
 
 		for range ticker.C {
 			ctx := context.Background()
-			// Delete expired entries
 			_, err := js.client.JsonStorage.Delete().
 				Where(jsonstorage.ExpiresAtLT(time.Now())).
 				Exec(ctx)
@@ -99,7 +111,6 @@ func (js *JsonStore) validateApiKey(ctx context.Context, key string) (bool, bool
 	return true, apiKey.IsAdmin, nil
 }
 
-// Add this helper function to get client prefix from API key
 func getClientPrefix(apiKey string) string {
 	hash := md5.Sum([]byte(apiKey))
 	return fmt.Sprintf("%x", hash)[:5]
@@ -141,7 +152,6 @@ func (js *JsonStore) CreateJSON(w http.ResponseWriter, r *http.Request) {
 		creatorKey = apiKey
 		requestedID := chi.URLParam(r, "id")
 
-		// Generate random ID for root route, use prefixed ID for specific route
 		if requestedID != "" {
 			clientPrefix := getClientPrefix(apiKey)
 			id = fmt.Sprintf("%s_%s", clientPrefix, requestedID)
@@ -246,7 +256,6 @@ func (js *JsonStore) CreateApiKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate the client ID from the API key
 	clientId := getClientPrefix(apiKey.Key)
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -280,8 +289,21 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHomePage(w http.ResponseWriter, r *http.Request) {
+	instanceInfo := os.Getenv("INSTANCE_INFO")
+	if instanceInfo == "" {
+		instanceInfo = fmt.Sprintf(`
+    <ul>
+		<li>Read the <a href="https://github.com/pluja/pocketjson?tab=readme-ov-file#api-reference-">API Docs</a></li>
+		<li>No backups. If your data is lost due to some technical issues, its lost forever.</li>
+		<li>Maximum allowed payload size cannot be more than %d Kb per request for guest users.</li>
+		<li>Guest users expiration time is %d hours</li>
+		<li>Guest rate limit of %d req/min</li>
+		<li>This is meant for small projects and that's why it is offered FREE of cost.</li>
+	</ul>`, defaultMaxSize/1024, int(defaultExpiry.Hours()), requestLimit)
+	}
+
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(`
+	w.Write([]byte(fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -289,34 +311,24 @@ func serveHomePage(w http.ResponseWriter, r *http.Request) {
 </head>
 <body>
     <h1>PocketJSON Storage Service</h1>
-    <p>Welcome to the JSON storage API</p>
-    <ul>
-		<li>Read the <a href="https://github.com/pluja/pocketjson?tab=readme-ov-file#api-reference-">API Docs</a></li>
-		<li>No backups. If your data is lost due to some technical issues, its lost forever.</li>
-		<li>Maximum allowed payload size cannot be more than 100 Kb per request for guest users.</li>
-		<li>Guest users expiration time is 48h</li>
-		<li>Guest rate limit of 15req/min</li>
-		<li>This is meant for small projects and that's why it is offered FREE of cost.</li>
-	</ul>
-	<p>Check out the official repo: <a href="https://github.com/pluja/pocketjson#readme">Source Code</a></p>
+    <p>Welcome to PocketJSON, a lightweight, single-binary JSON storage service with built-in expiry and multi-tenant support. Perfect for developers who need a quick, reliable way to store and retrieve JSON data without the overhead of a full database setup.</p>
+    %s
+    <p><a href="https://github.com/pluja/pocketjson#readme">Source Code</a></p>
 </body>
 </html>
-    `))
+    `, instanceInfo)))
 }
 
 func main() {
-	// Ensure data directory exists
 	dataDir := "data"
 	os.MkdirAll(dataDir, 0755)
 
-	// Modified connection string to enable foreign keys
 	client, err := ent.Open("sqlite3", filepath.Join(dataDir, "jsonstore.db")+"?_fk=1")
 	if err != nil {
 		log.Fatalf("failed opening connection to sqlite: %v", err)
 	}
 	defer client.Close()
 
-	// Run the auto migration tool
 	if err := client.Schema.Create(context.Background()); err != nil {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
@@ -327,22 +339,20 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	// Add CORS middleware
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{getEnvStr("CORS_ALLOWED_ORIGINS", "*")},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: false,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
+		MaxAge:           300,
 	}))
 
-	// Apply rate limiting only to non-authenticated requests
 	r.Use(func(next http.Handler) http.Handler {
 		limiter := httprate.Limit(
-			15,                                      // requests
-			1*time.Minute,                           // per minute
-			httprate.WithKeyFuncs(httprate.KeyByIP), // rate limit by IP
+			requestLimit,
+			1*time.Minute,
+			httprate.WithKeyFuncs(httprate.KeyByIP),
 		)
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -363,22 +373,19 @@ func main() {
 	})
 
 	r.Get("/health", healthCheck)
-
-	// JSON storage endpoints
-	// JSON storage endpoints
 	r.Get("/", serveHomePage)
 	r.Post("/", js.CreateJSON)
 	r.Post("/{id}", js.CreateJSON)
 	r.Get("/{id}", js.GetJSON)
-
-	// API key management endpoints (admin only)
 	r.Post("/admin/keys", js.adminOnly(js.CreateApiKey))
 	r.Delete("/admin/keys/{key}", js.adminOnly(js.DeleteApiKey))
 
-	masterApiKey = os.Getenv("MASTER_API_KEY")
+	// Generate a random key if no master key is provided
+	masterApiKey = getEnvStr("MASTER_API_KEY", "")
 	if masterApiKey == "" {
-		masterApiKey = "master-key-replace-in-production"
-		log.Println("Warning: Using default master API key. Consider setting MASTER_API_KEY environment variable.")
+		masterApiKey = generateRandomKey()
+		log.Printf("WARNING: No master API key provided. Generated random key: %s", masterApiKey)
+		log.Println("Please save this key and set it as MASTER_API_KEY environment variable for subsequent runs")
 	}
 
 	server := &http.Server{
@@ -386,22 +393,18 @@ func main() {
 		Handler: r,
 	}
 
-	// Handle graceful shutdown
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 		<-sigChan
 
-		// Create shutdown context with timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		// Shutdown the server
 		if err := server.Shutdown(ctx); err != nil {
 			log.Printf("HTTP server Shutdown: %v", err)
 		}
 
-		// Wait for cleanup routine to finish
 		js.cleanup.Wait()
 		os.Exit(0)
 	}()
