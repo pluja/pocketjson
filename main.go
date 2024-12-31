@@ -140,8 +140,14 @@ func (js *JsonStore) CreateJSON(w http.ResponseWriter, r *http.Request) {
 		maxSize = authenticatedSize
 		creatorKey = apiKey
 		requestedID := chi.URLParam(r, "id")
-		clientPrefix := getClientPrefix(apiKey)
-		id = fmt.Sprintf("%s_%s", clientPrefix, requestedID)
+
+		// Generate random ID for root route, use prefixed ID for specific route
+		if requestedID != "" {
+			clientPrefix := getClientPrefix(apiKey)
+			id = fmt.Sprintf("%s_%s", clientPrefix, requestedID)
+		} else {
+			id = generateRandomKey()
+		}
 
 		if exp := r.URL.Query().Get("expiry"); exp != "" {
 			if exp == "never" {
@@ -273,6 +279,31 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
 }
 
+func serveHomePage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PocketJSON</title>
+</head>
+<body>
+    <h1>PocketJSON Storage Service</h1>
+    <p>Welcome to the JSON storage API</p>
+    <ul>
+		<li>Read the <a href="https://github.com/pluja/pocketjson?tab=readme-ov-file#api-reference-">API Docs</a></li>
+		<li>No backups. If your data is lost due to some technical issues, its lost forever.</li>
+		<li>Maximum allowed payload size cannot be more than 100 Kb per request for guest users.</li>
+		<li>Guest users expiration time is 24h</li>
+		<li>Guest rate limit of 15req/min</li>
+		<li>This is meant for small projects and that's why it is offered FREE of cost.</li>
+	</ul>
+	<p>Check out the official repo: <a href="https://github.com/pluja/pocketjson#readme">Source Code</a></p>
+</body>
+</html>
+    `))
+}
+
 func main() {
 	// Ensure data directory exists
 	dataDir := "data"
@@ -334,6 +365,9 @@ func main() {
 	r.Get("/health", healthCheck)
 
 	// JSON storage endpoints
+	// JSON storage endpoints
+	r.Get("/", serveHomePage)
+	r.Post("/", js.CreateJSON)
 	r.Post("/{id}", js.CreateJSON)
 	r.Get("/{id}", js.GetJSON)
 
