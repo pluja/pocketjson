@@ -28,7 +28,7 @@ A lightweight, single-binary JSON storage service with built-in expiry and multi
 
 ```bash
 # Build
-go build
+go build -o pocketjson ./cmd/pocketjson
 # Run
 ./pocketjson
 ```
@@ -38,6 +38,8 @@ go build
 | Variable               | Description                               | Default                          | Required |
 | ---------------------- | ----------------------------------------- | -------------------------------- | -------- |
 | MASTER_API_KEY         | Master key for administrative operations  | *random value, see std output*   | No       |
+| PORT                   | HTTP server port                          | `9819`                           | No       |
+| DATA_DIR               | Directory for SQLite database             | `data`                           | No       |
 | REQUEST_LIMIT          | Rate limit requests per minute for guests | 15                               | No       |
 | DEFAULT_EXPIRY_HOURS   | Default expiry time for stores            | `48`                             | No       |
 | DEFAULT_MAX_SIZE       | Maximum JSON size for guests in bytes     | `102400` (100kb)                 | No       |
@@ -50,7 +52,8 @@ go build
 
 ### Guest Mode
 
-Store JSON (expires in 24 hours):
+Store JSON (expires in 48 hours by default):
+
 ```bash
 curl -X POST http://localhost:9819 \
   -H "Content-Type: application/json" \
@@ -64,6 +67,7 @@ curl -X POST http://localhost:9819 \
 ```
 
 Retrieve JSON:
+
 ```bash
 curl http://localhost:9819/f7a8b9c0d1e2
 ```
@@ -144,11 +148,11 @@ Note: Authenticated users' IDs are prefixed with their client_id (first 5 chars 
 ### Setup
 
 ```bash
-# Generate Ent code
-go generate ./ent
-
 # Build
-go build
+go build -o pocketjson ./cmd/pocketjson
+
+# Run
+./pocketjson
 ```
 
 ## Why PocketJSON? 🤔

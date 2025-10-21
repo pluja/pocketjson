@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PocketJSON</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        h1 {
+            color: #0066cc;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #009900;
+            margin-top: 30px;
+            border-left: 5px solid #009900;
+            padding-left: 10px;
+        }
+        .info-box {
+            background-color: #ffffcc;
+            border: 2px solid #cc9900;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .example {
+            background-color: #f5f5f5;
+            border: 2px solid #666;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .example h3 {
+            margin-top: 0;
+            color: #cc0000;
+            font-size: 16px;
+        }
+        code {
+            background-color: #000;
+            color: #00ff00;
+            padding: 2px 6px;
+            font-family: 'Courier New', monospace;
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #333;
+            overflow-x: auto;
+        }
+        ul {
+            line-height: 1.8;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+            color: #cc0000;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #999;
+            text-align: center;
+            color: #666;
+        }
+        .endpoint {
+            color: #cc00cc;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>PocketJSON Storage Service</h1>
+
+    <p>Welcome to PocketJSON, a lightweight, single-binary JSON storage service with built-in expiry and multi-tenant support. Perfect for developers who need a quick, reliable way to store and retrieve JSON data without the overhead of a full database setup.</p>
+
+    <div class="info-box">
+        {{if .InstanceInfo}}
+            {{.InstanceInfo}}
+        {{else}}
+        <ul>
+            <li>Read the <a href="https://github.com/pluja/pocketjson?tab=readme-ov-file#api-reference-">API Docs</a></li>
+            <li>No backups. If your data is lost due to some technical issues, it's lost forever.</li>
+            <li>Maximum allowed payload size cannot be more than <strong>{{.MaxSizeKB}} KB</strong> per request for guest users.</li>
+            <li>Guest users expiration time is <strong>{{.ExpiryHours}} hours</strong></li>
+            <li>Guest rate limit of <strong>{{.RateLimit}} req/min</strong></li>
+            <li>This is meant for small projects and that's why it is offered FREE of cost.</li>
+        </ul>
+        {{end}}
+    </div>
+
+    <h2>Quick Start Examples</h2>
+
+    <div class="example">
+        <h3>1. Store JSON Data (Guest)</h3>
+        <p>POST your JSON data to create a new storage entry:</p>
+        <code>curl -X POST http://localhost:9819 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John","age":30}'</code>
+        <p><strong>Response:</strong></p>
+        <code>{"id":"f7a8b9c0d1e2","expires_at":"2024-01-21T15:30:45Z"}</code>
+    </div>
+
+    <div class="example">
+        <h3>2. Retrieve JSON Data</h3>
+        <p>GET your stored JSON using the ID:</p>
+        <code>curl http://localhost:9819/f7a8b9c0d1e2</code>
+        <p><strong>Response:</strong></p>
+        <code>{"name":"John","age":30}</code>
+    </div>
+
+    <div class="example">
+        <h3>3. Store with Custom ID (Authenticated)</h3>
+        <p>Use an API key to set custom IDs and expiration:</p>
+        <code>curl -X POST "http://localhost:9819/my-custom-id?expiry=72" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"status":"active"}'</code>
+        <p><strong>Note:</strong> Authenticated users get prefixed IDs and longer expiration options.</p>
+    </div>
+
+    <h2>API Endpoints</h2>
+    <ul>
+        <li><span class="endpoint">POST /</span> - Store JSON with random ID</li>
+        <li><span class="endpoint">POST /{id}</span> - Store JSON with custom ID (auth required)</li>
+        <li><span class="endpoint">GET /{id}</span> - Retrieve JSON by ID</li>
+        <li><span class="endpoint">GET /health</span> - Health check</li>
+    </ul>
+
+    <div class="footer">
+        <p>★ <a href="https://github.com/pluja/pocketjson#readme">Source Code</a> ★</p>
+        <p>Made with <3 for the indie web</p>
+    </div>
+</body>
+</html>
