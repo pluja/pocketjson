@@ -17,6 +17,15 @@ A lightweight, single-binary JSON storage service with built-in expiry and multi
 
 ### Using Docker
 
+#### Option 1: Docker Pull (Easiest)
+
+```bash
+docker pull ghcr.io/pluja/pocketjson:latest
+docker run -d -p 9819:9819 -v $(pwd)/data:/app/data ghcr.io/pluja/pocketjson:latest
+```
+
+#### Option 2: Docker Compose
+
 1. Copy the `docker-compose.yml` file
 2. Run `docker-compose up -d`
 3. (optional) Set the `MASTER_API_KEY` env variable to a `.env` file
